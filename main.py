@@ -18,6 +18,10 @@ average entry price, fees included):
     bounce run to several percent while banking small ones.
   - TIME STOP: close the position after 480 bars (8 hours) if the
     trailing stop has not fired.
+  - RE-ENTRY COOLDOWN: no new entry for 30 bars after an exit, so a
+    stop-loss exit is not immediately chased back into the same move.
+    Uses the exit sequence already tracked; neutral on the dev window
+    (same 8 trades, same PnL).
 
 Sizing: 100% of cash on every entry (the weight cap is 100% of equity).
 No new entries after batch 1400, so nothing is left to the end-of-window
@@ -51,6 +55,7 @@ STOP_LOSS_PCT = 0.005       # -0.50% from entry
 TRAIL_ARM_PCT = 0.004       # trailing arms at +0.40%
 TRAIL_PCT = 0.005           # sell 0.50% below the peak since entry
 MAX_HOLD_BARS = 480         # 8 hours
+COOLDOWN_BARS = 30          # no re-entry for 30 bars after an exit
 LAST_ENTRY_SEQ = 1400
 MAX_SLIPPAGE_BPS = 200
 SYMBOL = "CBBTC"
@@ -130,6 +135,8 @@ class Bot:
         if self.buy_pending or qty > 0:
             return []
         if seq >= LAST_ENTRY_SEQ:
+            return []
+        if seq - self.last_exit_seq < COOLDOWN_BARS:
             return []
         n = len(self.closes)
         if n < DIP_WINDOW + 1:
